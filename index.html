@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rastreo de bultos — Consulta pública</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/" class="brand">TRACK<span class="dot">·</span>TAG <small>Consulta pública</small></a>
+    <a href="/admin.html" class="nav-link">Acceso administrador</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">Buscador de códigos</p>
+  <h1 class="page-title">¿Dónde está tu bulto?</h1>
+  <p class="page-sub">Ingresá el código para ver su ubicación de origen, destino, estado y fotografía asociada.</p>
+
+  <section class="search-panel">
+    <form id="search-form" class="search-row">
+      <div class="search-input-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="codigo-input" placeholder="Ej: CJ-04821" autocomplete="off" inputmode="search" autofocus>
+      </div>
+      <button type="submit" class="btn" id="search-btn">Buscar</button>
+    </form>
+    <p class="status-line" id="status-line"></p>
+  </section>
+
+  <div id="results"></div>
+</main>
+
+<footer class="foot">Trazabilidad de bultos — datos servidos desde Cloudflare KV.</footer>
+
+<script src="/assets/app.js"></script>
+<script>
+(() => {
+  const form = document.getElementById('search-form');
+  const input = document.getElementById('codigo-input');
+  const btn = document.getElementById('search-btn');
+  const statusLine = document.getElementById('status-line');
+  const results = document.getElementById('results');
+
+  async function runSearch(codigo) {
+    if (!codigo) {
+      statusLine.textContent = '';
+      results.innerHTML = '';
+      return;
+    }
+    btn.disabled = true;
+    statusLine.className = 'status-line';
+    statusLine.textContent = 'Buscando…';
+    try {
+      const { records } = await Tracker.fetchRecords(codigo);
+      const changed = records.filter(r => r.cambiado).length;
+      statusLine.textContent = records.length
+        ? `${records.length} resultado${records.length === 1 ? '' : 's'} — ${changed} cambiado(s), ${records.length - changed} por cambiar`
+        : '';
+      Tracker.renderResults(results, records, `No encontramos ningún registro para "${codigo}".`);
+    } catch (err) {
+      statusLine.className = 'status-line error';
+      statusLine.textContent = err.message;
+      results.innerHTML = '';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    runSearch(input.value.trim());
+  });
+})();
+</script>
+</body>
+</html>

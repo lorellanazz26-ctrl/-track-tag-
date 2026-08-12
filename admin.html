@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rastreo de bultos — Administrador</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/admin.html" class="brand">TRACK<span class="dot">·</span>TAG <small>Panel administrador</small></a>
+    <a href="/" class="nav-link">Ver consulta pública</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">Carga y control de inventario</p>
+  <h1 class="page-title">Panel de administrador</h1>
+  <p class="page-sub">Registrá movimientos de bultos, adjuntá fotografía y controlá el estado de cambio.</p>
+
+  <div class="counter-row">
+    <div class="counter ok">
+      <div class="label">Cambiado</div>
+      <div class="value" id="count-ok">—</div>
+    </div>
+    <div class="counter pending">
+      <div class="label">Por cambiar</div>
+      <div class="value" id="count-pending">—</div>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <!-- FORM -->
+    <section class="panel">
+      <h2>Nuevo registro</h2>
+
+      <div class="field admin-key-gate">
+        <label for="admin-key">Clave de administrador</label>
+        <input type="text" id="admin-key" placeholder="ADMIN_KEY" autocomplete="off">
+      </div>
+
+      <form id="record-form">
+        <div class="field">
+          <label for="f-codigo">Código</label>
+          <input type="text" id="f-codigo" placeholder="Ej: CJ-04821" required>
+        </div>
+        <div class="field">
+          <label for="f-origen">Ubicación origen</label>
+          <input type="text" id="f-origen" placeholder="Ej: Rack A-3" required>
+        </div>
+        <div class="field">
+          <label for="f-cantidad">Cantidad</label>
+          <input type="number" id="f-cantidad" min="0" step="1" placeholder="0" required>
+        </div>
+        <div class="field">
+          <label for="f-destino">Ubicación destino</label>
+          <input type="text" id="f-destino" placeholder="Ej: Rack C-1" required>
+        </div>
+
+        <div class="field">
+          <label>Fotografía</label>
+          <div class="photo-input">
+            <img id="photo-preview" class="photo-preview" alt="Vista previa">
+            <div class="photo-actions">
+              <button type="button" class="btn-ghost btn" id="btn-camera">📷 Tomar foto</button>
+              <button type="button" class="btn-ghost btn" id="btn-gallery">🖼 Galería</button>
+            </div>
+            <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none">
+            <input type="file" id="input-gallery" accept="image/*" style="display:none">
+            <p class="photo-hint" id="photo-hint">Opcional. Se comprime automáticamente antes de guardar.</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="check-row" for="f-cambiado">
+            <input type="checkbox" id="f-cambiado">
+            <span>
+              <span class="check-label">CAMBIADO</span>
+              <div class="check-sub">Marcá si el bulto ya fue reubicado</div>
+            </span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn" id="btn-save" style="width:100%; padding:14px 0;">Guardar registro</button>
+      </form>
+    </section>
+
+    <!-- SEARCH -->
+    <section>
+      <div class="search-panel">
+        <form id="search-form" class="search-row">
+          <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="codigo-input" placeholder="Buscar por código…" autocomplete="off">
+          </div>
+          <button type="submit" class="btn">Buscar</button>
+          <button type="button" class="btn btn-ghost" id="btn-clear">Limpiar</button>
+        </form>
+        <p class="status-line" id="status-line"></p>
+      </div>
+      <div id="results"></div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">Trazabilidad de bultos — datos servidos desde Cloudflare KV. La clave de administrador nunca se guarda en el servidor, solo viaja con cada solicitud.</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/app.js"></script>
+<script>
+(() => {
+  const adminKeyInput = document.getElementById('admin-key');
+  const form = document.getElementById('record-form');
+  const saveBtn = document.getElementById('btn-save');
+  const toast = document.getElementById('toast');
+
+  const photoPreview = document.getElementById('photo-preview');
+  const photoHint = document.getElementById('photo-hint');
+  const inputCamera = document.getElementById('input-camera');
+  const inputGallery = document.getElementById('input-gallery');
+  let currentImageDataUrl = null;
+
+  // Persist admin key locally for convenience during a work session
+  adminKeyInput.value = sessionStorage.getItem('trackTagAdminKey') || '';
+  adminKeyInput.addEventListener('input', () => {
+    sessionStorage.setItem('trackTagAdminKey', adminKeyInput.value);
+  });
+
+  document.getElementById('btn-camera').addEventListener('click', () => inputCamera.click());
+  document.getElementById('btn-gallery').addEventListener('click', () => inputGallery.click());
+
+  async function handleFile(file) {
+    if (!file) return;
+    photoHint.textContent = 'Procesando imagen…';
+    try {
+      currentImageDataUrl = await Tracker.compressImage(file);
+      photoPreview.src = currentImageDataUrl;
+      photoPreview.classList.add('show');
+      const kb = Math.round((currentImageDataUrl.length * 0.75) / 1024);
+      photoHint.textContent = `Imagen lista (~${kb} KB).`;
+    } catch (err) {
+      photoHint.textContent = 'No se pudo procesar la imagen: ' + err.message;
+    }
+  }
+
+  inputCamera.addEventListener('change', (e) => handleFile(e.target.files[0]));
+  inputGallery.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const adminKey = adminKeyInput.value.trim();
+    if (!adminKey) {
+      Tracker.showToast(toast, 'Ingresá la clave de administrador para guardar.', 'err');
+      adminKeyInput.focus();
+      return;
+    }
+
+    const record = {
+      codigo: document.getElementById('f-codigo').value.trim(),
+      ubicacionOrigen: document.getElementById('f-origen').value.trim(),
+      cantidad: Number(document.getElementById('f-cantidad').value),
+      ubicacionDestino: document.getElementById('f-destino').value.trim(),
+      cambiado: document.getElementById('f-cambiado').checked,
+      imagen: currentImageDataUrl
+    };
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner"></span>Guardando…';
+
+    try {
+      await Tracker.createRecord(record, adminKey);
+      Tracker.showToast(toast, `Registro ${record.codigo} guardado correctamente.`, 'ok');
+      form.reset();
+      currentImageDataUrl = null;
+      photoPreview.classList.remove('show');
+      photoPreview.src = '';
+      photoHint.textContent = 'Opcional. Se comprime automáticamente antes de guardar.';
+      loadCounters();
+      // Si hay una búsqueda activa con el mismo código, refrescarla
+      const codigoInput = document.getElementById('codigo-input');
+      if (codigoInput.value.trim()) runSearch(codigoInput.value.trim());
+    } catch (err) {
+      Tracker.showToast(toast, err.message, 'err');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Guardar registro';
+    }
+  });
+
+  // ---- Counters ----
+  const countOk = document.getElementById('count-ok');
+  const countPending = document.getElementById('count-pending');
+
+  async function loadCounters() {
+    try {
+      const { records } = await Tracker.fetchRecords();
+      const ok = records.filter(r => r.cambiado).length;
+      countOk.textContent = ok;
+      countPending.textContent = records.length - ok;
+    } catch (err) {
+      countOk.textContent = '—';
+      countPending.textContent = '—';
+    }
+  }
+  loadCounters();
+
+  // ---- Search ----
+  const searchForm = document.getElementById('search-form');
+  const codigoInput = document.getElementById('codigo-input');
+  const statusLine = document.getElementById('status-line');
+  const results = document.getElementById('results');
+
+  async function runSearch(codigo) {
+    if (!codigo) {
+      statusLine.textContent = '';
+      results.innerHTML = '';
+      return;
+    }
+    statusLine.className = 'status-line';
+    statusLine.textContent = 'Buscando…';
+    try {
+      const { records } = await Tracker.fetchRecords(codigo);
+      const changed = records.filter(r => r.cambiado).length;
+      statusLine.textContent = records.length
+        ? `${records.length} resultado${records.length === 1 ? '' : 's'} — ${changed} cambiado(s), ${records.length - changed} por cambiar`
+        : '';
+      Tracker.renderResults(results, records, `No encontramos ningún registro para "${codigo}".`);
+    } catch (err) {
+      statusLine.className = 'status-line error';
+      statusLine.textContent = err.message;
+      results.innerHTML = '';
+    }
+  }
+
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    runSearch(codigoInput.value.trim());
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    codigoInput.value = '';
+    statusLine.textContent = '';
+    results.innerHTML = '';
+    codigoInput.focus();
+  });
+})();
+</script>
+</body>
+</html>
