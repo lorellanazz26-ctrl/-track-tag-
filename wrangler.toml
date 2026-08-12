@@ -4,4 +4,4 @@ compatibility_date = "2024-09-01"
 
 # Para desarrollo local con `wrangler pages dev`.
 # En producción, el binding se define desde el dashboard de Cloudflare Pages
-[[kv_namespaces]] binding = "INVENTORY_KV" id = "REEMPLAZAR_CON_ID_DEL_NAMESPACE" 
+[[kv_namespaces]] binding = "INVENTORY_KV" id = "-track-tag-" 
