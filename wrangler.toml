@@ -1,7 +1,7 @@
-name = "track-tag-data"
+name = "track-tag"
 pages_build_output_dir = "."
 compatibility_date = "2024-09-01"
 
-[[kv_namespaces]]
+[[track-tag-data]]
 binding = "INVENTORY_KV"
 id = "60071e49ebe244cc88bf2e9356ba2816"
