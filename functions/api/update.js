@@ -1,7 +1,7 @@
-// POST /api/write -> crea un nuevo registro. Requiere header X-Admin-Key.
+// PATCH /api/update -> edita un registro existente (incluye cambiar el estado CAMBIADO).
+// Requiere header X-Admin-Key.
 
 const KV_KEY = 'records';
-const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8MB de margen (KV admite hasta 25MB por valor)
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -14,11 +14,7 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-function uuid() {
-  return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-}
-
-export async function onRequestPost(context) {
+export async function onRequestPatch(context) {
   const { env, request } = context;
 
   if (!env.INVENTORY_KV) {
@@ -35,23 +31,20 @@ export async function onRequestPost(context) {
 
   let body;
   try {
-    const text = await request.text();
-    if (text.length > MAX_BODY_BYTES) {
-      return jsonResponse({ error: 'La imagen es demasiado pesada. Probá con una foto más liviana.' }, 413);
-    }
-    body = JSON.parse(text);
+    body = JSON.parse(await request.text());
   } catch (err) {
     return jsonResponse({ error: 'JSON inválido en la solicitud.' }, 400);
   }
 
+  const id = String(body.id || '').trim();
   const codigo = String(body.codigo || '').trim();
   const ubicacionOrigen = String(body.ubicacionOrigen || '').trim();
   const ubicacionDestino = String(body.ubicacionDestino || '').trim();
   const descripcion = String(body.descripcion || '').trim();
   const cantidad = Number(body.cantidad);
   const cambiado = !!body.cambiado;
-  const imagen = typeof body.imagen === 'string' && body.imagen.startsWith('data:image') ? body.imagen : null;
 
+  if (!id) return jsonResponse({ error: 'Falta el id del registro a editar.' }, 400);
   if (!codigo) return jsonResponse({ error: 'El código es obligatorio.' }, 400);
   if (!ubicacionOrigen) return jsonResponse({ error: 'La ubicación de origen es obligatoria.' }, 400);
   if (!ubicacionDestino) return jsonResponse({ error: 'La ubicación de destino es obligatoria.' }, 400);
@@ -60,27 +53,41 @@ export async function onRequestPost(context) {
   try {
     const raw = await env.INVENTORY_KV.get(KV_KEY);
     const records = raw ? JSON.parse(raw) : [];
+    const idx = records.findIndex(r => r.id === id);
 
-    const now = new Date().toISOString();
-    const newRecord = {
-      id: uuid(),
+    if (idx === -1) {
+      return jsonResponse({ error: 'No se encontró el registro a editar.' }, 404);
+    }
+
+    const prev = records[idx];
+
+    // Si pasa de "por cambiar" a "cambiado", queda la fecha de ese cambio.
+    // Si se vuelve a marcar como "por cambiar", se limpia la fecha de cambio.
+    let fechaCambio = prev.fechaCambio || null;
+    if (cambiado && !prev.cambiado) {
+      fechaCambio = new Date().toISOString();
+    } else if (!cambiado) {
+      fechaCambio = null;
+    }
+
+    const updated = {
+      ...prev,
       codigo,
       ubicacionOrigen,
       ubicacionDestino,
       descripcion,
       cantidad,
       cambiado,
-      fechaCambio: cambiado ? now : null,
-      imagen,
-      fecha: now
+      fechaCambio,
+      fechaActualizacion: new Date().toISOString()
     };
 
-    records.unshift(newRecord);
+    records[idx] = updated;
     await env.INVENTORY_KV.put(KV_KEY, JSON.stringify(records));
 
-    return jsonResponse({ ok: true, record: newRecord }, 201);
+    return jsonResponse({ ok: true, record: updated });
   } catch (err) {
-    return jsonResponse({ error: 'Error al guardar el registro: ' + err.message }, 500);
+    return jsonResponse({ error: 'Error al actualizar el registro: ' + err.message }, 500);
   }
 }
 
@@ -88,7 +95,7 @@ export async function onRequestOptions() {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key'
     }
   });

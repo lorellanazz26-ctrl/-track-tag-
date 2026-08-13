@@ -21,13 +21,15 @@
   <p class="page-sub">Registrá movimientos de bultos, adjuntá fotografía y controlá el estado de cambio.</p>
 
   <div class="counter-row">
-    <div class="counter ok">
+    <div class="counter ok" id="counter-ok" role="button" tabindex="0">
       <div class="label">Cambiado</div>
       <div class="value" id="count-ok">—</div>
+      <div class="hint">Ver registros</div>
     </div>
-    <div class="counter pending">
+    <div class="counter pending" id="counter-pending" role="button" tabindex="0">
       <div class="label">Por cambiar</div>
       <div class="value" id="count-pending">—</div>
+      <div class="hint">Ver registros</div>
     </div>
   </div>
 
@@ -57,6 +59,10 @@
         <div class="field">
           <label for="f-destino">Ubicación destino</label>
           <input type="text" id="f-destino" placeholder="Ej: Rack C-1" required>
+        </div>
+        <div class="field">
+          <label for="f-descripcion">Descripción</label>
+          <textarea id="f-descripcion" rows="3" placeholder="Detalle del ítem (opcional)"></textarea>
         </div>
 
         <div class="field">
@@ -166,6 +172,7 @@
       ubicacionOrigen: document.getElementById('f-origen').value.trim(),
       cantidad: Number(document.getElementById('f-cantidad').value),
       ubicacionDestino: document.getElementById('f-destino').value.trim(),
+      descripcion: document.getElementById('f-descripcion').value.trim(),
       cambiado: document.getElementById('f-cambiado').checked,
       imagen: currentImageDataUrl
     };
@@ -182,9 +189,12 @@
       photoPreview.src = '';
       photoHint.textContent = 'Opcional. Se comprime automáticamente antes de guardar.';
       loadCounters();
-      // Si hay una búsqueda activa con el mismo código, refrescarla
-      const codigoInput = document.getElementById('codigo-input');
-      if (codigoInput.value.trim()) runSearch(codigoInput.value.trim());
+      // Refrescar la vista activa (búsqueda o filtro por estado), si hay alguna
+      if (activeStatusFilter) {
+        loadStatusList(activeStatusFilter);
+      } else if (codigoInput.value.trim()) {
+        runSearch(codigoInput.value.trim());
+      }
     } catch (err) {
       Tracker.showToast(toast, err.message, 'err');
     } finally {
@@ -193,13 +203,39 @@
     }
   });
 
-  // ---- Counters ----
+  // ---- Estado compartido de la lista de resultados (búsqueda o filtro) ----
+  const searchForm = document.getElementById('search-form');
+  const codigoInput = document.getElementById('codigo-input');
+  const statusLine = document.getElementById('status-line');
+  const results = document.getElementById('results');
+  const counterOk = document.getElementById('counter-ok');
+  const counterPending = document.getElementById('counter-pending');
+
+  let currentRecords = [];
+  let editingId = null;
+  let activeStatusFilter = null; // 'ok' | 'pending' | null
+
+  function renderList() {
+    Tracker.renderResults(results, currentRecords, 'No hay registros para mostrar.', {
+      editable: true,
+      editingId
+    });
+  }
+
+  function clearStatusHighlight() {
+    counterOk.classList.remove('active');
+    counterPending.classList.remove('active');
+  }
+
+  // ---- Contadores ----
   const countOk = document.getElementById('count-ok');
   const countPending = document.getElementById('count-pending');
+  let allRecordsCache = [];
 
   async function loadCounters() {
     try {
       const { records } = await Tracker.fetchRecords();
+      allRecordsCache = records;
       const ok = records.filter(r => r.cambiado).length;
       countOk.textContent = ok;
       countPending.textContent = records.length - ok;
@@ -210,27 +246,65 @@
   }
   loadCounters();
 
-  // ---- Search ----
-  const searchForm = document.getElementById('search-form');
-  const codigoInput = document.getElementById('codigo-input');
-  const statusLine = document.getElementById('status-line');
-  const results = document.getElementById('results');
+  async function loadStatusList(filter) {
+    statusLine.className = 'status-line';
+    statusLine.textContent = 'Cargando…';
+    try {
+      const { records } = await Tracker.fetchRecords();
+      allRecordsCache = records;
+      currentRecords = records.filter(r => filter === 'ok' ? r.cambiado : !r.cambiado);
+      editingId = null;
+      statusLine.textContent = `${currentRecords.length} registro${currentRecords.length === 1 ? '' : 's'} ${filter === 'ok' ? 'cambiado(s)' : 'por cambiar'}`;
+      renderList();
+    } catch (err) {
+      statusLine.className = 'status-line error';
+      statusLine.textContent = err.message;
+      currentRecords = [];
+      renderList();
+    }
+  }
 
+  function toggleStatusFilter(filter) {
+    codigoInput.value = '';
+    if (activeStatusFilter === filter) {
+      activeStatusFilter = null;
+      clearStatusHighlight();
+      currentRecords = [];
+      editingId = null;
+      statusLine.textContent = '';
+      results.innerHTML = '';
+      return;
+    }
+    activeStatusFilter = filter;
+    clearStatusHighlight();
+    (filter === 'ok' ? counterOk : counterPending).classList.add('active');
+    loadStatusList(filter);
+  }
+
+  counterOk.addEventListener('click', () => toggleStatusFilter('ok'));
+  counterPending.addEventListener('click', () => toggleStatusFilter('pending'));
+  counterOk.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStatusFilter('ok'); } });
+  counterPending.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStatusFilter('pending'); } });
+
+  // ---- Búsqueda por código ----
   async function runSearch(codigo) {
     if (!codigo) {
       statusLine.textContent = '';
       results.innerHTML = '';
+      currentRecords = [];
       return;
     }
     statusLine.className = 'status-line';
     statusLine.textContent = 'Buscando…';
     try {
       const { records } = await Tracker.fetchRecords(codigo);
+      currentRecords = records;
+      editingId = null;
       const changed = records.filter(r => r.cambiado).length;
       statusLine.textContent = records.length
         ? `${records.length} resultado${records.length === 1 ? '' : 's'} — ${changed} cambiado(s), ${records.length - changed} por cambiar`
         : '';
-      Tracker.renderResults(results, records, `No encontramos ningún registro para "${codigo}".`);
+      renderList();
     } catch (err) {
       statusLine.className = 'status-line error';
       statusLine.textContent = err.message;
@@ -240,14 +314,84 @@
 
   searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    activeStatusFilter = null;
+    clearStatusHighlight();
     runSearch(codigoInput.value.trim());
   });
 
   document.getElementById('btn-clear').addEventListener('click', () => {
     codigoInput.value = '';
+    activeStatusFilter = null;
+    clearStatusHighlight();
     statusLine.textContent = '';
     results.innerHTML = '';
+    currentRecords = [];
     codigoInput.focus();
+  });
+
+  // ---- Edición inline (lápiz -> formulario -> guardar/cancelar) ----
+  results.addEventListener('click', async (e) => {
+    const editBtn = e.target.closest('[data-edit-id]');
+    if (editBtn) {
+      editingId = editBtn.dataset.editId;
+      renderList();
+      return;
+    }
+
+    const cancelBtn = e.target.closest('[data-cancel-id]');
+    if (cancelBtn) {
+      editingId = null;
+      renderList();
+      return;
+    }
+
+    const saveBtn = e.target.closest('[data-save-id]');
+    if (saveBtn) {
+      const id = saveBtn.dataset.saveId;
+      const card = saveBtn.closest('.tag-card-editing');
+      const adminKey = adminKeyInput.value.trim();
+
+      if (!adminKey) {
+        Tracker.showToast(toast, 'Ingresá la clave de administrador para guardar.', 'err');
+        adminKeyInput.focus();
+        return;
+      }
+
+      const patch = {
+        id,
+        codigo: card.querySelector('.edit-codigo').value.trim(),
+        ubicacionOrigen: card.querySelector('.edit-origen').value.trim(),
+        cantidad: Number(card.querySelector('.edit-cantidad').value),
+        ubicacionDestino: card.querySelector('.edit-destino').value.trim(),
+        descripcion: card.querySelector('.edit-descripcion').value.trim(),
+        cambiado: card.querySelector('.edit-cambiado').checked
+      };
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Guardando…';
+
+      try {
+        const { record } = await Tracker.updateRecord(patch, adminKey);
+        currentRecords = currentRecords.map(r => r.id === record.id ? record : r);
+        editingId = null;
+
+        // Si estamos en un filtro por estado y el registro ya no pertenece a ese filtro, sacarlo de la lista
+        if (activeStatusFilter) {
+          currentRecords = currentRecords.filter(r =>
+            activeStatusFilter === 'ok' ? r.cambiado : !r.cambiado
+          );
+          statusLine.textContent = `${currentRecords.length} registro${currentRecords.length === 1 ? '' : 's'} ${activeStatusFilter === 'ok' ? 'cambiado(s)' : 'por cambiar'}`;
+        }
+
+        renderList();
+        loadCounters();
+        Tracker.showToast(toast, `Registro ${record.codigo} actualizado.`, 'ok');
+      } catch (err) {
+        Tracker.showToast(toast, err.message, 'err');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar';
+      }
+    }
   });
 })();
 </script>

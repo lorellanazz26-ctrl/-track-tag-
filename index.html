@@ -62,7 +62,13 @@
       statusLine.textContent = records.length
         ? `${records.length} resultado${records.length === 1 ? '' : 's'} — ${changed} cambiado(s), ${records.length - changed} por cambiar`
         : '';
-      Tracker.renderResults(results, records, `No encontramos ningún registro para "${codigo}".`);
+
+      // Orden cronológico (más antiguo primero) y solo la foto del registro
+      // más reciente de cada código.
+      const ordered = [...records].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      const latestPhotoIds = Tracker.groupLatestPhotoIds(records);
+
+      Tracker.renderResults(results, ordered, `No encontramos ningún registro para "${codigo}".`, { latestPhotoIds });
     } catch (err) {
       statusLine.className = 'status-line error';
       statusLine.textContent = err.message;
