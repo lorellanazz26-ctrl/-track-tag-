@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rastreo de bultos — Consulta pública</title>
 <link rel="stylesheet" href="/assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js" defer></script>
 </head>
 <body>
 
@@ -64,6 +65,7 @@
         : '';
 
       Tracker.renderTimeline(results, records, `No encontramos ningún registro para "${codigo}".`);
+      Tracker.renderBarcodes(results);
     } catch (err) {
       statusLine.className = 'status-line error';
       statusLine.textContent = err.message;

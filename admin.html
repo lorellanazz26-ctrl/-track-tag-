@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rastreo de bultos — Administrador</title>
 <link rel="stylesheet" href="/assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js" defer></script>
 </head>
 <body>
 
@@ -46,7 +47,9 @@
       <form id="record-form">
         <div class="field">
           <label for="f-codigo">Código</label>
-          <input type="text" id="f-codigo" placeholder="Ej: CJ-04821" required>
+          <input type="text" id="f-codigo" placeholder="Ej: CJ-04821" required autocomplete="off">
+          <input type="hidden" id="f-codigobarra">
+          <p class="barcode-hint" id="f-barcode-hint">Cargando catálogo de códigos…</p>
         </div>
         <div class="field">
           <label for="f-origen">Ubicación origen</label>
@@ -125,6 +128,58 @@
   const saveBtn = document.getElementById('btn-save');
   const toast = document.getElementById('toast');
 
+  // ---- Catálogo de códigos internos -> código de barra ----
+  // Formato: { "codigoInterno": ["codigoBarra", "descripcion", "fuente"] }
+  let codigoLookup = {};
+  const fCodigo = document.getElementById('f-codigo');
+  const fCodigoBarra = document.getElementById('f-codigobarra');
+  const fBarcodeHint = document.getElementById('f-barcode-hint');
+  const fDescripcion = document.getElementById('f-descripcion');
+
+  fetch('/assets/catalogo-codigos.json')
+    .then(res => res.json())
+    .then(data => {
+      codigoLookup = data;
+      fBarcodeHint.textContent = 'Escribí el código interno para buscar su código de barra.';
+      fBarcodeHint.className = 'barcode-hint';
+    })
+    .catch(() => {
+      fBarcodeHint.textContent = 'No se pudo cargar el catálogo de códigos.';
+      fBarcodeHint.className = 'barcode-hint notfound';
+    });
+
+  function lookupCodigo(value) {
+    const entry = codigoLookup[value];
+    if (!entry) return null;
+    const [barcode, descripcion, fuente] = entry;
+    return { barcode: barcode || '', descripcion: descripcion || '', fuente: fuente || '' };
+  }
+
+  fCodigo.addEventListener('input', () => {
+    const value = fCodigo.value.trim();
+    if (!value) {
+      fCodigoBarra.value = '';
+      fBarcodeHint.textContent = 'Escribí el código interno para buscar su código de barra.';
+      fBarcodeHint.className = 'barcode-hint';
+      return;
+    }
+    const match = lookupCodigo(value);
+    if (match) {
+      fCodigoBarra.value = match.barcode;
+      fBarcodeHint.textContent = match.barcode
+        ? `✓ ${match.descripcion || 'Encontrado'} — código de barra ${match.barcode}`
+        : `✓ ${match.descripcion || 'Encontrado'} — sin código de barra en el catálogo`;
+      fBarcodeHint.className = 'barcode-hint found';
+      if (!fDescripcion.value.trim() && match.descripcion) {
+        fDescripcion.value = match.descripcion;
+      }
+    } else {
+      fCodigoBarra.value = '';
+      fBarcodeHint.textContent = 'No encontrado en el catálogo — se guardará sin código de barra.';
+      fBarcodeHint.className = 'barcode-hint notfound';
+    }
+  });
+
   const photoPreview = document.getElementById('photo-preview');
   const photoHint = document.getElementById('photo-hint');
   const inputCamera = document.getElementById('input-camera');
@@ -169,6 +224,7 @@
 
     const record = {
       codigo: document.getElementById('f-codigo').value.trim(),
+      codigoBarra: fCodigoBarra.value.trim() || null,
       ubicacionOrigen: document.getElementById('f-origen').value.trim(),
       cantidad: Number(document.getElementById('f-cantidad').value),
       ubicacionDestino: document.getElementById('f-destino').value.trim(),
@@ -184,6 +240,9 @@
       await Tracker.createRecord(record, adminKey);
       Tracker.showToast(toast, `Registro ${record.codigo} guardado correctamente.`, 'ok');
       form.reset();
+      fCodigoBarra.value = '';
+      fBarcodeHint.textContent = 'Escribí el código interno para buscar su código de barra.';
+      fBarcodeHint.className = 'barcode-hint';
       currentImageDataUrl = null;
       photoPreview.classList.remove('show');
       photoPreview.src = '';
@@ -223,6 +282,7 @@
     } else {
       Tracker.renderResults(results, currentRecords, 'No hay registros para mostrar.', opts);
     }
+    Tracker.renderBarcodes(results);
   }
 
   function clearStatusHighlight() {
@@ -338,6 +398,25 @@
   });
 
   // ---- Edición inline (lápiz -> formulario -> guardar/cancelar) ----
+  // ---- Edición inline (lápiz -> formulario -> guardar/cancelar) ----
+  results.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('edit-codigo')) return;
+    const card = e.target.closest('.tag-card-editing');
+    const hidden = card.querySelector('.edit-codigobarra');
+    const hint = card.querySelector('.edit-barcode-hint');
+    const value = e.target.value.trim();
+    const match = lookupCodigo(value);
+    if (match) {
+      hidden.value = match.barcode;
+      hint.textContent = match.barcode
+        ? `Código de barra: ${match.barcode} — ${match.descripcion || ''}`
+        : `Sin código de barra en el catálogo — ${match.descripcion || ''}`;
+    } else {
+      hidden.value = '';
+      hint.textContent = value ? 'No encontrado en el catálogo' : 'Sin código de barra asociado';
+    }
+  });
+
   results.addEventListener('click', async (e) => {
     const editBtn = e.target.closest('[data-edit-id]');
     if (editBtn) {
@@ -368,6 +447,7 @@
       const patch = {
         id,
         codigo: card.querySelector('.edit-codigo').value.trim(),
+        codigoBarra: card.querySelector('.edit-codigobarra').value.trim() || null,
         ubicacionOrigen: card.querySelector('.edit-origen').value.trim(),
         cantidad: Number(card.querySelector('.edit-cantidad').value),
         ubicacionDestino: card.querySelector('.edit-destino').value.trim(),

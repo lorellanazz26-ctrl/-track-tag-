@@ -45,6 +45,7 @@ export async function onRequestPost(context) {
   }
 
   const codigo = String(body.codigo || '').trim();
+  const codigoBarra = String(body.codigoBarra || '').trim();
   const ubicacionOrigen = String(body.ubicacionOrigen || '').trim();
   const ubicacionDestino = String(body.ubicacionDestino || '').trim();
   const descripcion = String(body.descripcion || '').trim();
@@ -65,6 +66,7 @@ export async function onRequestPost(context) {
     const newRecord = {
       id: uuid(),
       codigo,
+      codigoBarra: codigoBarra || null,
       ubicacionOrigen,
       ubicacionDestino,
       descripcion,

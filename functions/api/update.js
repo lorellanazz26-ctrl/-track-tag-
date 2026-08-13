@@ -38,6 +38,7 @@ export async function onRequestPatch(context) {
 
   const id = String(body.id || '').trim();
   const codigo = String(body.codigo || '').trim();
+  const codigoBarra = String(body.codigoBarra || '').trim();
   const ubicacionOrigen = String(body.ubicacionOrigen || '').trim();
   const ubicacionDestino = String(body.ubicacionDestino || '').trim();
   const descripcion = String(body.descripcion || '').trim();
@@ -73,6 +74,7 @@ export async function onRequestPatch(context) {
     const updated = {
       ...prev,
       codigo,
+      codigoBarra: codigoBarra || null,
       ubicacionOrigen,
       ubicacionDestino,
       descripcion,

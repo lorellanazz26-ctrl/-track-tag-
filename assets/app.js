@@ -111,11 +111,56 @@ const Tracker = (() => {
     });
   }
 
+  // Elige el formato de código de barra según la cantidad de dígitos
+  function chooseBarcodeFormat(value) {
+    if (/^\d{13}$/.test(value)) return 'EAN13';
+    if (/^\d{12}$/.test(value)) return 'UPC';
+    if (/^\d{8}$/.test(value)) return 'EAN8';
+    return 'CODE128';
+  }
+
+  // Recorre el contenedor y dibuja los códigos de barra pendientes (JsBarcode
+  // debe estar cargado globalmente). Marca cada uno como renderizado para no
+  // repetir el trabajo si se vuelve a llamar sobre el mismo contenedor.
+  function renderBarcodes(container) {
+    if (typeof JsBarcode === 'undefined' || !container) return;
+    const nodes = container.querySelectorAll('.barcode-svg[data-barcode-value]:not([data-rendered])');
+    nodes.forEach(svg => {
+      const value = svg.getAttribute('data-barcode-value');
+      if (!value) return;
+      try {
+        JsBarcode(svg, value, {
+          format: chooseBarcodeFormat(value),
+          lineColor: '#111111',
+          width: 2,
+          height: 46,
+          fontSize: 12,
+          margin: 6,
+          displayValue: true
+        });
+      } catch (err) {
+        svg.closest('.tag-barcode')?.remove();
+      }
+      svg.setAttribute('data-rendered', 'true');
+    });
+  }
+
+  function barcodeBlockHtml(rec) {
+    if (!rec.codigoBarra) return '';
+    return `
+      <div class="tag-barcode">
+        <svg class="barcode-svg" data-barcode-value="${escapeHtml(rec.codigoBarra)}"></svg>
+      </div>`;
+  }
+
   // Formulario inline de edición (reemplaza la ficha cuando está en modo edición)
   function editFormHtml(rec) {
     const photo = rec.imagen
       ? `<img class="tag-photo" src="${rec.imagen}" alt="Foto de ${escapeHtml(rec.codigo)}">`
       : `<div class="tag-photo-empty">Sin fotografía</div>`;
+    const barcodeHint = rec.codigoBarra
+      ? `Código de barra: ${escapeHtml(rec.codigoBarra)}`
+      : 'Sin código de barra asociado';
     return `
       <div class="tag-card tag-card-editing" data-id="${rec.id}">
         <span class="tag-punch"></span>
@@ -124,6 +169,8 @@ const Tracker = (() => {
           <div class="field">
             <label>Código</label>
             <input type="text" class="edit-codigo" value="${escapeHtml(rec.codigo)}">
+            <input type="hidden" class="edit-codigobarra" value="${escapeHtml(rec.codigoBarra || '')}">
+            <p class="barcode-hint edit-barcode-hint">${barcodeHint}</p>
           </div>
           <div class="field">
             <label>Ubicación origen</label>
@@ -188,6 +235,7 @@ const Tracker = (() => {
         ${photo}
         <div class="tag-body">
           <p class="tag-code">${escapeHtml(rec.codigo)}</p>
+          ${barcodeBlockHtml(rec)}
           <div class="tag-route">
             <span class="loc">${escapeHtml(rec.ubicacionOrigen || '—')}</span>
             <span class="arrow">&#8594;</span>
@@ -274,7 +322,7 @@ const Tracker = (() => {
 
   return {
     fetchRecords, createRecord, updateRecord, compressImage,
-    tagCard, renderResults, renderTimeline, groupLatestPhotoIds,
+    tagCard, renderResults, renderTimeline, renderBarcodes, groupLatestPhotoIds,
     showToast, escapeHtml, formatDate
   };
 })();

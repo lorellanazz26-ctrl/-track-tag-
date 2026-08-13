@@ -296,6 +296,25 @@ input::placeholder, textarea::placeholder { color: #5c6266; }
   margin: 0 0 14px;
 }
 
+.tag-barcode {
+  background: #ffffff;
+  border-radius: 3px;
+  padding: 8px 6px 4px;
+  margin: 0 0 14px;
+  display: flex;
+  justify-content: center;
+}
+.tag-barcode .barcode-svg { max-width: 100%; height: auto; }
+
+.barcode-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 6px 0 0;
+}
+.barcode-hint.found { color: var(--ok); }
+.barcode-hint.notfound { color: var(--pending); }
+
 .tag-date-changed { color: var(--ok); }
 
 .tag-card-editing .tag-body .field:last-of-type { margin-bottom: 14px; }
