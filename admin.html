@@ -359,8 +359,10 @@
     return { barcode: barcode || '', descripcion: descripcion || '', fuente: fuente || '' };
   }
 
-  fCodigo.addEventListener('input', () => {
-    const value = fCodigo.value.trim();
+  // Aplica el resultado del catálogo a los campos del formulario. Se llama
+  // recién 2 segundos después de que el usuario deja de escribir, para no
+  // autocompletar con un código todavía incompleto.
+  function applyCodigoLookup(value) {
     if (!value) {
       fCodigoBarra.value = '';
       fBarcodeHint.textContent = 'Escribí el código interno para buscar su código de barra.';
@@ -382,6 +384,21 @@
       fBarcodeHint.textContent = 'No encontrado en el catálogo — se guardará sin código de barra.';
       fBarcodeHint.className = 'barcode-hint notfound';
     }
+  }
+
+  let codigoLookupTimer = null;
+
+  fCodigo.addEventListener('input', () => {
+    const value = fCodigo.value.trim();
+    clearTimeout(codigoLookupTimer);
+    if (!value) {
+      applyCodigoLookup('');
+      return;
+    }
+    fCodigoBarra.value = '';
+    fBarcodeHint.textContent = 'Esperando que termines de escribir…';
+    fBarcodeHint.className = 'barcode-hint';
+    codigoLookupTimer = setTimeout(() => applyCodigoLookup(value), 2000);
   });
 
   // ---- Fotografía ----
@@ -416,6 +433,10 @@
   // ---- Guardar nuevo registro ----
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Si quedó pendiente el debounce del código, resolverlo ya mismo antes de guardar.
+    clearTimeout(codigoLookupTimer);
+    applyCodigoLookup(fCodigo.value.trim());
 
     const record = {
       codigo: document.getElementById('f-codigo').value.trim(),
@@ -588,12 +609,16 @@
   });
 
   // ---- Edición inline (lápiz -> formulario -> guardar/cancelar) ----
-  results.addEventListener('input', (e) => {
-    if (!e.target.classList.contains('edit-codigo')) return;
-    const card = e.target.closest('.tag-card-editing');
+  let editCodigoLookupTimer = null;
+
+  function applyEditCodigoLookup(card, value) {
     const hidden = card.querySelector('.edit-codigobarra');
     const hint = card.querySelector('.edit-barcode-hint');
-    const value = e.target.value.trim();
+    if (!value) {
+      hidden.value = '';
+      hint.textContent = 'Sin código de barra asociado';
+      return;
+    }
     const match = lookupCodigo(value);
     if (match) {
       hidden.value = match.barcode;
@@ -602,8 +627,22 @@
         : `Sin código de barra en el catálogo — ${match.descripcion || ''}`;
     } else {
       hidden.value = '';
-      hint.textContent = value ? 'No encontrado en el catálogo' : 'Sin código de barra asociado';
+      hint.textContent = 'No encontrado en el catálogo';
     }
+  }
+
+  results.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('edit-codigo')) return;
+    const card = e.target.closest('.tag-card-editing');
+    const hint = card.querySelector('.edit-barcode-hint');
+    const value = e.target.value.trim();
+    clearTimeout(editCodigoLookupTimer);
+    if (!value) {
+      applyEditCodigoLookup(card, '');
+      return;
+    }
+    hint.textContent = 'Esperando que termines de escribir…';
+    editCodigoLookupTimer = setTimeout(() => applyEditCodigoLookup(card, value), 2000);
   });
 
   results.addEventListener('click', async (e) => {
@@ -625,6 +664,10 @@
     if (saveBtn) {
       const id = saveBtn.dataset.saveId;
       const card = saveBtn.closest('.tag-card-editing');
+
+      // Si quedó pendiente el debounce del código, resolverlo ya mismo antes de guardar.
+      clearTimeout(editCodigoLookupTimer);
+      applyEditCodigoLookup(card, card.querySelector('.edit-codigo').value.trim());
 
       const patch = {
         id,
