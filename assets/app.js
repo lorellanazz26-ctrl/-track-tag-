@@ -216,6 +216,55 @@ const Tracker = (() => {
     container.innerHTML = `<div class="tag-grid">${records.map(r => tagCard(r, opts)).join('')}</div>`;
   }
 
+  // Agrupa los registros por código y los muestra como una línea de tiempo
+  // (del más antiguo al más nuevo), en vez de un mosaico. Cada grupo solo
+  // muestra la fotografía de su registro más reciente.
+  function renderTimeline(container, records, emptyMessage, opts = {}) {
+    if (!records || records.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <strong>Sin resultados</strong>
+          ${escapeHtml(emptyMessage || 'No encontramos registros con ese código.')}
+        </div>`;
+      return;
+    }
+
+    const groups = {};
+    records.forEach(r => {
+      if (!groups[r.codigo]) groups[r.codigo] = [];
+      groups[r.codigo].push(r);
+    });
+
+    const codes = Object.keys(groups).sort((a, b) => {
+      const latestA = Math.max(...groups[a].map(r => new Date(r.fecha).getTime()));
+      const latestB = Math.max(...groups[b].map(r => new Date(r.fecha).getTime()));
+      return latestB - latestA; // grupos con actividad más reciente primero
+    });
+
+    const html = codes.map(code => {
+      const list = groups[code].slice().sort((a, b) => new Date(a.fecha) - new Date(b.fecha)); // antiguo -> nuevo
+      const latestId = list[list.length - 1].id;
+      const changedCount = list.filter(r => r.cambiado).length;
+
+      const items = list.map(rec => {
+        const cardOpts = { ...opts, latestPhotoIds: new Set([latestId]) };
+        const isLatest = rec.id === latestId;
+        return `<div class="timeline-node ${isLatest ? 'is-latest' : ''}">${tagCard(rec, cardOpts)}</div>`;
+      }).join('');
+
+      return `
+        <div class="timeline-group">
+          <div class="timeline-group-header">
+            <span>${escapeHtml(code)}</span>
+            <span class="code-badge-count">${list.length} registro${list.length === 1 ? '' : 's'} · ${changedCount} cambiado(s)</span>
+          </div>
+          <div class="timeline-list">${items}</div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `<div class="timeline-groups">${html}</div>`;
+  }
+
   function showToast(el, message, type = 'ok') {
     el.textContent = message;
     el.className = `toast show ${type}`;
@@ -225,7 +274,7 @@ const Tracker = (() => {
 
   return {
     fetchRecords, createRecord, updateRecord, compressImage,
-    tagCard, renderResults, groupLatestPhotoIds,
+    tagCard, renderResults, renderTimeline, groupLatestPhotoIds,
     showToast, escapeHtml, formatDate
   };
 })();

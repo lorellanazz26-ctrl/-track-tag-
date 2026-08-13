@@ -214,12 +214,15 @@
   let currentRecords = [];
   let editingId = null;
   let activeStatusFilter = null; // 'ok' | 'pending' | null
+  let listMode = null; // 'search' | 'status' | null
 
   function renderList() {
-    Tracker.renderResults(results, currentRecords, 'No hay registros para mostrar.', {
-      editable: true,
-      editingId
-    });
+    const opts = { editable: true, editingId };
+    if (listMode === 'search') {
+      Tracker.renderTimeline(results, currentRecords, 'No hay registros para mostrar.', opts);
+    } else {
+      Tracker.renderResults(results, currentRecords, 'No hay registros para mostrar.', opts);
+    }
   }
 
   function clearStatusHighlight() {
@@ -249,6 +252,7 @@
   async function loadStatusList(filter) {
     statusLine.className = 'status-line';
     statusLine.textContent = 'Cargando…';
+    listMode = 'status';
     try {
       const { records } = await Tracker.fetchRecords();
       allRecordsCache = records;
@@ -271,6 +275,7 @@
       clearStatusHighlight();
       currentRecords = [];
       editingId = null;
+      listMode = null;
       statusLine.textContent = '';
       results.innerHTML = '';
       return;
@@ -292,10 +297,12 @@
       statusLine.textContent = '';
       results.innerHTML = '';
       currentRecords = [];
+      listMode = null;
       return;
     }
     statusLine.className = 'status-line';
     statusLine.textContent = 'Buscando…';
+    listMode = 'search';
     try {
       const { records } = await Tracker.fetchRecords(codigo);
       currentRecords = records;
@@ -326,6 +333,7 @@
     statusLine.textContent = '';
     results.innerHTML = '';
     currentRecords = [];
+    listMode = null;
     codigoInput.focus();
   });
 

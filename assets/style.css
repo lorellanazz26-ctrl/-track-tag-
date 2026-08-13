@@ -374,6 +374,80 @@ input::placeholder, textarea::placeholder { color: #5c6266; }
   margin-top: 12px;
 }
 
+/* ---------- Timeline (historial por código) ---------- */
+.timeline-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  margin-top: 28px;
+}
+
+.timeline-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 0.02em;
+}
+
+.timeline-group-header .code-badge-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.timeline-list {
+  position: relative;
+  padding-left: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.timeline-list::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline-node {
+  position: relative;
+  animation: rise .35s ease both;
+}
+
+.timeline-node::before {
+  content: '';
+  position: absolute;
+  left: -30px;
+  top: 20px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  z-index: 2;
+}
+
+.timeline-node.is-latest::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.timeline-node .tag-card {
+  max-width: 480px;
+}
+
 /* ---------- Empty state ---------- */
 .empty-state {
   margin-top: 40px;
