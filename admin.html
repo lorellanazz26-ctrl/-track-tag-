@@ -362,6 +362,15 @@
   // Aplica el resultado del catálogo a los campos del formulario. Se llama
   // recién 2 segundos después de que el usuario deja de escribir, para no
   // autocompletar con un código todavía incompleto.
+  let descripcionAutoFilled = false;
+
+  // Si el usuario toca la descripción a mano, dejamos de pisarla con futuros
+  // resultados del catálogo (por ejemplo, coincidencias de códigos intermedios
+  // mientras seguía escribiendo el código completo).
+  fDescripcion.addEventListener('input', () => {
+    descripcionAutoFilled = false;
+  });
+
   function applyCodigoLookup(value) {
     if (!value) {
       fCodigoBarra.value = '';
@@ -376,8 +385,12 @@
         ? `✓ ${match.descripcion || 'Encontrado'} — código de barra ${match.barcode}`
         : `✓ ${match.descripcion || 'Encontrado'} — sin código de barra en el catálogo`;
       fBarcodeHint.className = 'barcode-hint found';
-      if (!fDescripcion.value.trim() && match.descripcion) {
+      // Solo autocompleta si el campo está vacío, o si lo que hay ahí lo
+      // puso el sistema (no el usuario) — así una coincidencia posterior
+      // más precisa puede corregir a una anterior de un código a medio escribir.
+      if ((!fDescripcion.value.trim() || descripcionAutoFilled) && match.descripcion) {
         fDescripcion.value = match.descripcion;
+        descripcionAutoFilled = true;
       }
     } else {
       fCodigoBarra.value = '';
@@ -457,6 +470,7 @@
       Tracker.showToast(toast, `Registro ${record.codigo} guardado correctamente.`, 'ok');
       form.reset();
       fCodigoBarra.value = '';
+      descripcionAutoFilled = false;
       fBarcodeHint.textContent = 'Escribí el código interno para buscar su código de barra.';
       fBarcodeHint.className = 'barcode-hint';
       currentImageDataUrl = null;
