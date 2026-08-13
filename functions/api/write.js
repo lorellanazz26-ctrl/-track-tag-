@@ -1,18 +1,9 @@
-// POST /api/write -> crea un nuevo registro. Requiere header X-Admin-Key.
+// POST /api/write -> crea un nuevo registro. Requiere sesión válida (Authorization: Bearer <token>).
+
+import { verifyToken, getBearerToken, jsonResponse } from '../_lib/auth.js';
 
 const KV_KEY = 'records';
 const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8MB de margen (KV admite hasta 25MB por valor)
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-store'
-    }
-  });
-}
 
 function uuid() {
   return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -28,9 +19,9 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Falta la variable secreta ADMIN_KEY en Cloudflare Pages.' }, 500);
   }
 
-  const providedKey = request.headers.get('X-Admin-Key') || '';
-  if (providedKey !== env.ADMIN_KEY) {
-    return jsonResponse({ error: 'Clave de administrador incorrecta.' }, 401);
+  const session = await verifyToken(getBearerToken(request), env.ADMIN_KEY);
+  if (!session) {
+    return jsonResponse({ error: 'Sesión inválida o expirada. Volvé a iniciar sesión.' }, 401);
   }
 
   let body;
@@ -74,7 +65,8 @@ export async function onRequestPost(context) {
       cambiado,
       fechaCambio: cambiado ? now : null,
       imagen,
-      fecha: now
+      fecha: now,
+      creadoPor: session.u
     };
 
     records.unshift(newRecord);
@@ -91,7 +83,7 @@ export async function onRequestOptions() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
   });
 }

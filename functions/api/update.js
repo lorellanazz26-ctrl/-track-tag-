@@ -1,18 +1,9 @@
 // PATCH /api/update -> edita un registro existente (incluye cambiar el estado CAMBIADO).
-// Requiere header X-Admin-Key.
+// Requiere sesión válida (Authorization: Bearer <token>).
+
+import { verifyToken, getBearerToken, jsonResponse } from '../_lib/auth.js';
 
 const KV_KEY = 'records';
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-store'
-    }
-  });
-}
 
 export async function onRequestPatch(context) {
   const { env, request } = context;
@@ -24,9 +15,9 @@ export async function onRequestPatch(context) {
     return jsonResponse({ error: 'Falta la variable secreta ADMIN_KEY en Cloudflare Pages.' }, 500);
   }
 
-  const providedKey = request.headers.get('X-Admin-Key') || '';
-  if (providedKey !== env.ADMIN_KEY) {
-    return jsonResponse({ error: 'Clave de administrador incorrecta.' }, 401);
+  const session = await verifyToken(getBearerToken(request), env.ADMIN_KEY);
+  if (!session) {
+    return jsonResponse({ error: 'Sesión inválida o expirada. Volvé a iniciar sesión.' }, 401);
   }
 
   let body;
@@ -81,7 +72,8 @@ export async function onRequestPatch(context) {
       cantidad,
       cambiado,
       fechaCambio,
-      fechaActualizacion: new Date().toISOString()
+      fechaActualizacion: new Date().toISOString(),
+      actualizadoPor: session.u
     };
 
     records[idx] = updated;
@@ -98,7 +90,7 @@ export async function onRequestOptions() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'PATCH, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
   });
 }

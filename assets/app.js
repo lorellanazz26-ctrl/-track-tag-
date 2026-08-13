@@ -18,6 +18,12 @@ const Tracker = (() => {
     });
   }
 
+  function httpError(message, status) {
+    const err = new Error(message);
+    err.status = status;
+    return err;
+  }
+
   async function fetchRecords(codigo) {
     const url = codigo
       ? `/api/read?codigo=${encodeURIComponent(codigo)}`
@@ -30,34 +36,34 @@ const Tracker = (() => {
     return res.json();
   }
 
-  async function createRecord(record, adminKey) {
+  async function createRecord(record, token) {
     const res = await fetch('/api/write', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Admin-Key': adminKey || ''
+        'Authorization': `Bearer ${token || ''}`
       },
       body: JSON.stringify(record)
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(body.error || `Error ${res.status} al guardar`);
+      throw httpError(body.error || `Error ${res.status} al guardar`, res.status);
     }
     return body;
   }
 
-  async function updateRecord(patch, adminKey) {
+  async function updateRecord(patch, token) {
     const res = await fetch('/api/update', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'X-Admin-Key': adminKey || ''
+        'Authorization': `Bearer ${token || ''}`
       },
       body: JSON.stringify(patch)
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(body.error || `Error ${res.status} al actualizar`);
+      throw httpError(body.error || `Error ${res.status} al actualizar`, res.status);
     }
     return body;
   }
@@ -109,6 +115,64 @@ const Tracker = (() => {
       reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
       reader.readAsDataURL(file);
     });
+  }
+
+  // ---- Sesión y usuarios ----
+
+  async function login(username, password) {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw httpError(body.error || `Error ${res.status} al iniciar sesión`, res.status);
+    }
+    return body; // { token, username, role, expiresAt }
+  }
+
+  async function fetchUsers(token) {
+    const res = await fetch('/api/users', {
+      headers: { 'Authorization': `Bearer ${token || ''}` }
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw httpError(body.error || `Error ${res.status} al listar usuarios`, res.status);
+    }
+    return body; // { users: [...] }
+  }
+
+  async function createUser({ username, password, role }, token, bootstrapAdminKey) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (bootstrapAdminKey) headers['X-Admin-Key'] = bootstrapAdminKey;
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ username, password, role })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw httpError(body.error || `Error ${res.status} al crear usuario`, res.status);
+    }
+    return body;
+  }
+
+  async function deleteUser(username, token) {
+    const res = await fetch('/api/users', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token || ''}`
+      },
+      body: JSON.stringify({ username })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw httpError(body.error || `Error ${res.status} al eliminar usuario`, res.status);
+    }
+    return body;
   }
 
   // Elige el formato de código de barra según la cantidad de dígitos
@@ -322,6 +386,7 @@ const Tracker = (() => {
 
   return {
     fetchRecords, createRecord, updateRecord, compressImage,
+    login, fetchUsers, createUser, deleteUser,
     tagCard, renderResults, renderTimeline, renderBarcodes, groupLatestPhotoIds,
     showToast, escapeHtml, formatDate
   };

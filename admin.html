@@ -12,121 +12,325 @@
 <header class="topbar">
   <div class="topbar-inner">
     <a href="/admin.html" class="brand">TRACK<span class="dot">·</span>TAG <small>Panel administrador</small></a>
-    <a href="/" class="nav-link">Ver consulta pública</a>
+    <div class="topbar-right" id="user-info" style="display:none; align-items:center; gap:12px;">
+      <span class="nav-link" id="user-info-label" style="border-color:transparent; cursor:default;"></span>
+      <a href="/" class="nav-link">Ver consulta pública</a>
+      <button type="button" class="btn btn-ghost" id="btn-logout" style="padding:8px 14px;">Cerrar sesión</button>
+    </div>
   </div>
 </header>
 
 <main class="wrap">
-  <p class="eyebrow">Carga y control de inventario</p>
-  <h1 class="page-title">Panel de administrador</h1>
-  <p class="page-sub">Registrá movimientos de bultos, adjuntá fotografía y controlá el estado de cambio.</p>
 
-  <div class="counter-row">
-    <div class="counter ok" id="counter-ok" role="button" tabindex="0">
-      <div class="label">Cambiado</div>
-      <div class="value" id="count-ok">—</div>
-      <div class="hint">Ver registros</div>
-    </div>
-    <div class="counter pending" id="counter-pending" role="button" tabindex="0">
-      <div class="label">Por cambiar</div>
-      <div class="value" id="count-pending">—</div>
-      <div class="hint">Ver registros</div>
-    </div>
-  </div>
+  <!-- ======================= PANTALLA DE LOGIN ======================= -->
+  <section id="login-screen">
+    <p class="eyebrow">Acceso restringido</p>
+    <h1 class="page-title">Iniciar sesión</h1>
+    <p class="page-sub">Ingresá con tu usuario y contraseña para acceder al panel de administrador.</p>
 
-  <div class="admin-grid">
-    <!-- FORM -->
-    <section class="panel">
-      <h2>Nuevo registro</h2>
-
-      <div class="field admin-key-gate">
-        <label for="admin-key">Clave de administrador</label>
-        <input type="text" id="admin-key" placeholder="ADMIN_KEY" autocomplete="off">
-      </div>
-
-      <form id="record-form">
+    <div class="panel" style="max-width:400px;">
+      <form id="login-form">
         <div class="field">
-          <label for="f-codigo">Código</label>
-          <input type="text" id="f-codigo" placeholder="Ej: CJ-04821" required autocomplete="off">
-          <input type="hidden" id="f-codigobarra">
-          <p class="barcode-hint" id="f-barcode-hint">Cargando catálogo de códigos…</p>
+          <label for="login-username">Usuario</label>
+          <input type="text" id="login-username" autocomplete="username" required>
         </div>
         <div class="field">
-          <label for="f-origen">Ubicación origen</label>
-          <input type="text" id="f-origen" placeholder="Ej: Rack A-3" required>
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" autocomplete="current-password" required>
         </div>
-        <div class="field">
-          <label for="f-cantidad">Cantidad</label>
-          <input type="number" id="f-cantidad" min="0" step="1" placeholder="0" required>
-        </div>
-        <div class="field">
-          <label for="f-destino">Ubicación destino</label>
-          <input type="text" id="f-destino" placeholder="Ej: Rack C-1" required>
-        </div>
-        <div class="field">
-          <label for="f-descripcion">Descripción</label>
-          <textarea id="f-descripcion" rows="3" placeholder="Detalle del ítem (opcional)"></textarea>
-        </div>
-
-        <div class="field">
-          <label>Fotografía</label>
-          <div class="photo-input">
-            <img id="photo-preview" class="photo-preview" alt="Vista previa">
-            <div class="photo-actions">
-              <button type="button" class="btn-ghost btn" id="btn-camera">📷 Tomar foto</button>
-              <button type="button" class="btn-ghost btn" id="btn-gallery">🖼 Galería</button>
-            </div>
-            <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none">
-            <input type="file" id="input-gallery" accept="image/*" style="display:none">
-            <p class="photo-hint" id="photo-hint">Opcional. Se comprime automáticamente antes de guardar.</p>
-          </div>
-        </div>
-
-        <div class="field">
-          <label class="check-row" for="f-cambiado">
-            <input type="checkbox" id="f-cambiado">
-            <span>
-              <span class="check-label">CAMBIADO</span>
-              <div class="check-sub">Marcá si el bulto ya fue reubicado</div>
-            </span>
-          </label>
-        </div>
-
-        <button type="submit" class="btn" id="btn-save" style="width:100%; padding:14px 0;">Guardar registro</button>
+        <p class="status-line error" id="login-error"></p>
+        <button type="submit" class="btn" id="btn-login" style="width:100%; padding:14px 0;">Ingresar</button>
       </form>
-    </section>
+    </div>
 
-    <!-- SEARCH -->
-    <section>
-      <div class="search-panel">
-        <form id="search-form" class="search-row">
-          <div class="search-input-wrap">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input type="text" id="codigo-input" placeholder="Buscar por código…" autocomplete="off">
-          </div>
-          <button type="submit" class="btn">Buscar</button>
-          <button type="button" class="btn btn-ghost" id="btn-clear">Limpiar</button>
-        </form>
-        <p class="status-line" id="status-line"></p>
+    <p style="margin-top:22px;">
+      <button type="button" class="btn-ghost btn" id="btn-toggle-bootstrap" style="padding:10px 16px;">¿Primera vez? Crear administrador inicial</button>
+    </p>
+
+    <div class="panel" style="max-width:400px; display:none;" id="bootstrap-panel">
+      <h2 style="font-size:18px;">Crear administrador inicial</h2>
+      <p class="page-sub" style="font-size:13px; margin-bottom:18px;">Esto solo funciona una vez, mientras no exista ningún usuario todavía. Necesitás la <code>ADMIN_KEY</code> configurada en Cloudflare Pages.</p>
+      <form id="bootstrap-form">
+        <div class="field">
+          <label for="bootstrap-adminkey">ADMIN_KEY</label>
+          <input type="text" id="bootstrap-adminkey" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="bootstrap-username">Usuario nuevo</label>
+          <input type="text" id="bootstrap-username" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="bootstrap-password">Contraseña nueva</label>
+          <input type="password" id="bootstrap-password" autocomplete="new-password" required>
+        </div>
+        <p class="status-line error" id="bootstrap-error"></p>
+        <button type="submit" class="btn" id="btn-bootstrap" style="width:100%; padding:14px 0;">Crear administrador</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ======================= CONTENIDO DEL PANEL (requiere login) ======================= -->
+  <div id="app-content" style="display:none;">
+    <p class="eyebrow">Carga y control de inventario</p>
+    <h1 class="page-title">Panel de administrador</h1>
+    <p class="page-sub">Registrá movimientos de bultos, adjuntá fotografía y controlá el estado de cambio.</p>
+
+    <div class="counter-row">
+      <div class="counter ok" id="counter-ok" role="button" tabindex="0">
+        <div class="label">Cambiado</div>
+        <div class="value" id="count-ok">—</div>
+        <div class="hint">Ver registros</div>
       </div>
-      <div id="results"></div>
+      <div class="counter pending" id="counter-pending" role="button" tabindex="0">
+        <div class="label">Por cambiar</div>
+        <div class="value" id="count-pending">—</div>
+        <div class="hint">Ver registros</div>
+      </div>
+    </div>
+
+    <div class="admin-grid">
+      <!-- FORM -->
+      <section class="panel">
+        <h2>Nuevo registro</h2>
+
+        <form id="record-form">
+          <div class="field">
+            <label for="f-codigo">Código</label>
+            <input type="text" id="f-codigo" placeholder="Ej: CJ-04821" required autocomplete="off">
+            <input type="hidden" id="f-codigobarra">
+            <p class="barcode-hint" id="f-barcode-hint">Cargando catálogo de códigos…</p>
+          </div>
+          <div class="field">
+            <label for="f-origen">Ubicación origen</label>
+            <input type="text" id="f-origen" placeholder="Ej: Rack A-3" required>
+          </div>
+          <div class="field">
+            <label for="f-cantidad">Cantidad</label>
+            <input type="number" id="f-cantidad" min="0" step="1" placeholder="0" required>
+          </div>
+          <div class="field">
+            <label for="f-destino">Ubicación destino</label>
+            <input type="text" id="f-destino" placeholder="Ej: Rack C-1" required>
+          </div>
+          <div class="field">
+            <label for="f-descripcion">Descripción</label>
+            <textarea id="f-descripcion" rows="3" placeholder="Detalle del ítem (opcional)"></textarea>
+          </div>
+
+          <div class="field">
+            <label>Fotografía</label>
+            <div class="photo-input">
+              <img id="photo-preview" class="photo-preview" alt="Vista previa">
+              <div class="photo-actions">
+                <button type="button" class="btn-ghost btn" id="btn-camera">📷 Tomar foto</button>
+                <button type="button" class="btn-ghost btn" id="btn-gallery">🖼 Galería</button>
+              </div>
+              <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none">
+              <input type="file" id="input-gallery" accept="image/*" style="display:none">
+              <p class="photo-hint" id="photo-hint">Opcional. Se comprime automáticamente antes de guardar.</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="check-row" for="f-cambiado">
+              <input type="checkbox" id="f-cambiado">
+              <span>
+                <span class="check-label">CAMBIADO</span>
+                <div class="check-sub">Marcá si el bulto ya fue reubicado</div>
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn" id="btn-save" style="width:100%; padding:14px 0;">Guardar registro</button>
+        </form>
+      </section>
+
+      <!-- SEARCH -->
+      <section>
+        <div class="search-panel">
+          <form id="search-form" class="search-row">
+            <div class="search-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="codigo-input" placeholder="Buscar por código…" autocomplete="off">
+            </div>
+            <button type="submit" class="btn">Buscar</button>
+            <button type="button" class="btn btn-ghost" id="btn-clear">Limpiar</button>
+          </form>
+          <p class="status-line" id="status-line"></p>
+        </div>
+        <div id="results"></div>
+      </section>
+    </div>
+
+    <!-- ======================= GESTIÓN DE USUARIOS (solo admin) ======================= -->
+    <section class="panel" id="users-panel" style="display:none; margin-top:40px;">
+      <h2>Gestión de usuarios</h2>
+      <p class="page-sub" style="font-size:13px;">Los administradores pueden crear y eliminar usuarios. Los operadores solo pueden cargar y editar registros.</p>
+
+      <div id="users-list" style="margin-bottom:24px;"></div>
+
+      <h2 style="font-size:18px;">Crear usuario nuevo</h2>
+      <form id="new-user-form">
+        <div class="field">
+          <label for="nu-username">Usuario</label>
+          <input type="text" id="nu-username" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="nu-password">Contraseña</label>
+          <input type="password" id="nu-password" autocomplete="new-password" required>
+        </div>
+        <div class="field">
+          <label for="nu-role">Rol</label>
+          <select id="nu-role" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:var(--font-mono); font-size:15px; padding:14px; border-radius:var(--radius);">
+            <option value="operador">Operador (carga y edita registros)</option>
+            <option value="admin">Administrador (además crea usuarios)</option>
+          </select>
+        </div>
+        <p class="status-line error" id="new-user-error"></p>
+        <button type="submit" class="btn" id="btn-create-user">Crear usuario</button>
+      </form>
     </section>
   </div>
 </main>
 
-<footer class="foot">Trazabilidad de bultos — datos servidos desde Cloudflare KV. La clave de administrador nunca se guarda en el servidor, solo viaja con cada solicitud.</footer>
+<footer class="foot">Trazabilidad de bultos — datos servidos desde Cloudflare KV.</footer>
 
 <div class="toast" id="toast"></div>
 
 <script src="/assets/app.js"></script>
 <script>
 (() => {
-  const adminKeyInput = document.getElementById('admin-key');
-  const form = document.getElementById('record-form');
-  const saveBtn = document.getElementById('btn-save');
   const toast = document.getElementById('toast');
+  const SESSION_KEY = 'trackTagSession';
+
+  // ---- Sesión ----
+  let session = null;
+
+  function loadSession() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed.expiresAt || parsed.expiresAt < Date.now()) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveSession(s) {
+    session = s;
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  }
+
+  function clearSession() {
+    session = null;
+    sessionStorage.removeItem(SESSION_KEY);
+  }
+
+  function handleAuthError(err) {
+    if (err && err.status === 401) {
+      clearSession();
+      showLoginScreen();
+      Tracker.showToast(toast, 'Tu sesión expiró. Volvé a iniciar sesión.', 'err');
+      return true;
+    }
+    return false;
+  }
+
+  const loginScreen = document.getElementById('login-screen');
+  const appContent = document.getElementById('app-content');
+  const userInfo = document.getElementById('user-info');
+  const userInfoLabel = document.getElementById('user-info-label');
+  const usersPanel = document.getElementById('users-panel');
+
+  function showLoginScreen() {
+    loginScreen.style.display = '';
+    appContent.style.display = 'none';
+    userInfo.style.display = 'none';
+  }
+
+  function showApp() {
+    loginScreen.style.display = 'none';
+    appContent.style.display = '';
+    userInfo.style.display = 'flex';
+    userInfoLabel.textContent = `👤 ${session.username} · ${session.role === 'admin' ? 'Administrador' : 'Operador'}`;
+    usersPanel.style.display = session.role === 'admin' ? '' : 'none';
+
+    loadCounters();
+    if (session.role === 'admin') loadUsers();
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    clearSession();
+    showLoginScreen();
+  });
+
+  // ---- Formulario de login ----
+  const loginForm = document.getElementById('login-form');
+  const loginError = document.getElementById('login-error');
+  const btnLogin = document.getElementById('btn-login');
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.textContent = '';
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'Ingresando…';
+    try {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const result = await Tracker.login(username, password);
+      saveSession(result);
+      loginForm.reset();
+      showApp();
+    } catch (err) {
+      loginError.textContent = err.message;
+    } finally {
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'Ingresar';
+    }
+  });
+
+  // ---- Crear administrador inicial (bootstrap) ----
+  const btnToggleBootstrap = document.getElementById('btn-toggle-bootstrap');
+  const bootstrapPanel = document.getElementById('bootstrap-panel');
+  btnToggleBootstrap.addEventListener('click', () => {
+    const showing = bootstrapPanel.style.display !== 'none';
+    bootstrapPanel.style.display = showing ? 'none' : '';
+  });
+
+  const bootstrapForm = document.getElementById('bootstrap-form');
+  const bootstrapError = document.getElementById('bootstrap-error');
+  const btnBootstrap = document.getElementById('btn-bootstrap');
+
+  bootstrapForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    bootstrapError.textContent = '';
+    btnBootstrap.disabled = true;
+    btnBootstrap.textContent = 'Creando…';
+    try {
+      const adminKey = document.getElementById('bootstrap-adminkey').value.trim();
+      const username = document.getElementById('bootstrap-username').value.trim();
+      const password = document.getElementById('bootstrap-password').value;
+
+      await Tracker.createUser({ username, password, role: 'admin' }, null, adminKey);
+
+      // Iniciar sesión automáticamente con el usuario recién creado
+      const result = await Tracker.login(username, password);
+      saveSession(result);
+      bootstrapForm.reset();
+      bootstrapPanel.style.display = 'none';
+      Tracker.showToast(toast, `Administrador ${username} creado. ¡Bienvenido!`, 'ok');
+      showApp();
+    } catch (err) {
+      bootstrapError.textContent = err.message;
+    } finally {
+      btnBootstrap.disabled = false;
+      btnBootstrap.textContent = 'Crear administrador';
+    }
+  });
 
   // ---- Catálogo de códigos internos -> código de barra ----
   // Formato: { "codigoInterno": ["codigoBarra", "descripcion", "fuente"] }
@@ -180,17 +384,14 @@
     }
   });
 
+  // ---- Fotografía ----
+  const form = document.getElementById('record-form');
+  const saveBtn = document.getElementById('btn-save');
   const photoPreview = document.getElementById('photo-preview');
   const photoHint = document.getElementById('photo-hint');
   const inputCamera = document.getElementById('input-camera');
   const inputGallery = document.getElementById('input-gallery');
   let currentImageDataUrl = null;
-
-  // Persist admin key locally for convenience during a work session
-  adminKeyInput.value = sessionStorage.getItem('trackTagAdminKey') || '';
-  adminKeyInput.addEventListener('input', () => {
-    sessionStorage.setItem('trackTagAdminKey', adminKeyInput.value);
-  });
 
   document.getElementById('btn-camera').addEventListener('click', () => inputCamera.click());
   document.getElementById('btn-gallery').addEventListener('click', () => inputGallery.click());
@@ -212,15 +413,9 @@
   inputCamera.addEventListener('change', (e) => handleFile(e.target.files[0]));
   inputGallery.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
+  // ---- Guardar nuevo registro ----
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
-    const adminKey = adminKeyInput.value.trim();
-    if (!adminKey) {
-      Tracker.showToast(toast, 'Ingresá la clave de administrador para guardar.', 'err');
-      adminKeyInput.focus();
-      return;
-    }
 
     const record = {
       codigo: document.getElementById('f-codigo').value.trim(),
@@ -237,7 +432,7 @@
     saveBtn.innerHTML = '<span class="spinner"></span>Guardando…';
 
     try {
-      await Tracker.createRecord(record, adminKey);
+      await Tracker.createRecord(record, session.token);
       Tracker.showToast(toast, `Registro ${record.codigo} guardado correctamente.`, 'ok');
       form.reset();
       fCodigoBarra.value = '';
@@ -248,14 +443,13 @@
       photoPreview.src = '';
       photoHint.textContent = 'Opcional. Se comprime automáticamente antes de guardar.';
       loadCounters();
-      // Refrescar la vista activa (búsqueda o filtro por estado), si hay alguna
       if (activeStatusFilter) {
         loadStatusList(activeStatusFilter);
       } else if (codigoInput.value.trim()) {
         runSearch(codigoInput.value.trim());
       }
     } catch (err) {
-      Tracker.showToast(toast, err.message, 'err');
+      if (!handleAuthError(err)) Tracker.showToast(toast, err.message, 'err');
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = 'Guardar registro';
@@ -293,12 +487,10 @@
   // ---- Contadores ----
   const countOk = document.getElementById('count-ok');
   const countPending = document.getElementById('count-pending');
-  let allRecordsCache = [];
 
   async function loadCounters() {
     try {
       const { records } = await Tracker.fetchRecords();
-      allRecordsCache = records;
       const ok = records.filter(r => r.cambiado).length;
       countOk.textContent = ok;
       countPending.textContent = records.length - ok;
@@ -307,7 +499,6 @@
       countPending.textContent = '—';
     }
   }
-  loadCounters();
 
   async function loadStatusList(filter) {
     statusLine.className = 'status-line';
@@ -315,7 +506,6 @@
     listMode = 'status';
     try {
       const { records } = await Tracker.fetchRecords();
-      allRecordsCache = records;
       currentRecords = records.filter(r => filter === 'ok' ? r.cambiado : !r.cambiado);
       editingId = null;
       statusLine.textContent = `${currentRecords.length} registro${currentRecords.length === 1 ? '' : 's'} ${filter === 'ok' ? 'cambiado(s)' : 'por cambiar'}`;
@@ -398,7 +588,6 @@
   });
 
   // ---- Edición inline (lápiz -> formulario -> guardar/cancelar) ----
-  // ---- Edición inline (lápiz -> formulario -> guardar/cancelar) ----
   results.addEventListener('input', (e) => {
     if (!e.target.classList.contains('edit-codigo')) return;
     const card = e.target.closest('.tag-card-editing');
@@ -436,13 +625,6 @@
     if (saveBtn) {
       const id = saveBtn.dataset.saveId;
       const card = saveBtn.closest('.tag-card-editing');
-      const adminKey = adminKeyInput.value.trim();
-
-      if (!adminKey) {
-        Tracker.showToast(toast, 'Ingresá la clave de administrador para guardar.', 'err');
-        adminKeyInput.focus();
-        return;
-      }
 
       const patch = {
         id,
@@ -459,11 +641,10 @@
       saveBtn.textContent = 'Guardando…';
 
       try {
-        const { record } = await Tracker.updateRecord(patch, adminKey);
+        const { record } = await Tracker.updateRecord(patch, session.token);
         currentRecords = currentRecords.map(r => r.id === record.id ? record : r);
         editingId = null;
 
-        // Si estamos en un filtro por estado y el registro ya no pertenece a ese filtro, sacarlo de la lista
         if (activeStatusFilter) {
           currentRecords = currentRecords.filter(r =>
             activeStatusFilter === 'ok' ? r.cambiado : !r.cambiado
@@ -475,12 +656,93 @@
         loadCounters();
         Tracker.showToast(toast, `Registro ${record.codigo} actualizado.`, 'ok');
       } catch (err) {
-        Tracker.showToast(toast, err.message, 'err');
+        if (!handleAuthError(err)) Tracker.showToast(toast, err.message, 'err');
         saveBtn.disabled = false;
         saveBtn.textContent = 'Guardar';
       }
     }
   });
+
+  // ---- Gestión de usuarios (solo admin) ----
+  const usersList = document.getElementById('users-list');
+  const newUserForm = document.getElementById('new-user-form');
+  const newUserError = document.getElementById('new-user-error');
+  const btnCreateUser = document.getElementById('btn-create-user');
+
+  function renderUsersList(users) {
+    if (!users.length) {
+      usersList.innerHTML = '<p class="status-line">No hay otros usuarios todavía.</p>';
+      return;
+    }
+    usersList.innerHTML = users.map(u => `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
+        <div>
+          <span style="font-family:var(--font-mono); font-weight:600;">${Tracker.escapeHtml(u.username)}</span>
+          <span class="qty-pill" style="margin-left:8px;">${u.role === 'admin' ? 'Administrador' : 'Operador'}</span>
+        </div>
+        ${u.username === session.username
+          ? '<span class="barcode-hint">Vos</span>'
+          : `<button type="button" class="btn btn-ghost" data-delete-user="${Tracker.escapeHtml(u.username)}" style="padding:8px 14px;">Eliminar</button>`
+        }
+      </div>
+    `).join('');
+  }
+
+  async function loadUsers() {
+    try {
+      const { users } = await Tracker.fetchUsers(session.token);
+      renderUsersList(users);
+    } catch (err) {
+      if (!handleAuthError(err)) usersList.innerHTML = `<p class="status-line error">${Tracker.escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  newUserForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    newUserError.textContent = '';
+    btnCreateUser.disabled = true;
+    btnCreateUser.textContent = 'Creando…';
+    try {
+      const username = document.getElementById('nu-username').value.trim();
+      const password = document.getElementById('nu-password').value;
+      const role = document.getElementById('nu-role').value;
+      await Tracker.createUser({ username, password, role }, session.token);
+      newUserForm.reset();
+      Tracker.showToast(toast, `Usuario ${username} creado.`, 'ok');
+      loadUsers();
+    } catch (err) {
+      if (!handleAuthError(err)) newUserError.textContent = err.message;
+    } finally {
+      btnCreateUser.disabled = false;
+      btnCreateUser.textContent = 'Crear usuario';
+    }
+  });
+
+  usersList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-delete-user]');
+    if (!btn) return;
+    const username = btn.dataset.deleteUser;
+    if (!confirm(`¿Eliminar al usuario "${username}"? Esta acción no se puede deshacer.`)) return;
+    btn.disabled = true;
+    btn.textContent = 'Eliminando…';
+    try {
+      await Tracker.deleteUser(username, session.token);
+      Tracker.showToast(toast, `Usuario ${username} eliminado.`, 'ok');
+      loadUsers();
+    } catch (err) {
+      if (!handleAuthError(err)) Tracker.showToast(toast, err.message, 'err');
+      btn.disabled = false;
+      btn.textContent = 'Eliminar';
+    }
+  });
+
+  // ---- Arranque ----
+  session = loadSession();
+  if (session) {
+    showApp();
+  } else {
+    showLoginScreen();
+  }
 })();
 </script>
 </body>
