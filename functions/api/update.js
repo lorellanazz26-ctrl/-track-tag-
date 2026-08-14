@@ -85,11 +85,54 @@ export async function onRequestPatch(context) {
   }
 }
 
+export async function onRequestDelete(context) {
+  const { env, request } = context;
+
+  if (!env.INVENTORY_KV) {
+    return jsonResponse({ error: 'Falta el binding KV "INVENTORY_KV" en Cloudflare Pages.' }, 500);
+  }
+  if (!env.ADMIN_KEY) {
+    return jsonResponse({ error: 'Falta la variable secreta ADMIN_KEY en Cloudflare Pages.' }, 500);
+  }
+
+  const session = await verifyToken(getBearerToken(request), env.ADMIN_KEY);
+  if (!session) {
+    return jsonResponse({ error: 'Sesión inválida o expirada. Volvé a iniciar sesión.' }, 401);
+  }
+
+  let body;
+  try {
+    body = JSON.parse(await request.text());
+  } catch (err) {
+    return jsonResponse({ error: 'JSON inválido en la solicitud.' }, 400);
+  }
+
+  const id = String(body.id || '').trim();
+  if (!id) return jsonResponse({ error: 'Falta el id del registro a eliminar.' }, 400);
+
+  try {
+    const raw = await env.INVENTORY_KV.get(KV_KEY);
+    const records = raw ? JSON.parse(raw) : [];
+    const idx = records.findIndex(r => r.id === id);
+
+    if (idx === -1) {
+      return jsonResponse({ error: 'No se encontró el registro a eliminar.' }, 404);
+    }
+
+    records.splice(idx, 1);
+    await env.INVENTORY_KV.put(KV_KEY, JSON.stringify(records));
+
+    return jsonResponse({ ok: true, deletedId: id });
+  } catch (err) {
+    return jsonResponse({ error: 'Error al eliminar el registro: ' + err.message }, 500);
+  }
+}
+
 export async function onRequestOptions() {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'PATCH, OPTIONS',
+      'Access-Control-Allow-Methods': 'PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
   });

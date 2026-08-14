@@ -68,6 +68,22 @@ const Tracker = (() => {
     return body;
   }
 
+  async function deleteRecord(id, token) {
+    const res = await fetch('/api/update', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token || ''}`
+      },
+      body: JSON.stringify({ id })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw httpError(body.error || `Error ${res.status} al eliminar`, res.status);
+    }
+    return body;
+  }
+
   // Para cada código, devuelve el set de ids cuyo registro es el más reciente
   // de ese código (usado en la vista pública para mostrar una sola foto por código).
   function groupLatestPhotoIds(records) {
@@ -217,6 +233,15 @@ const Tracker = (() => {
       </div>`;
   }
 
+  function locationBarcodeHtml(label, value) {
+    if (!value) return '';
+    return `
+      <div class="tag-barcode tag-barcode-location">
+        <div class="barcode-label">${escapeHtml(label)}</div>
+        <svg class="barcode-svg" data-barcode-value="${escapeHtml(value)}"></svg>
+      </div>`;
+  }
+
   // Formulario inline de edición (reemplaza la ficha cuando está en modo edición)
   function editFormHtml(rec) {
     const photo = rec.imagen
@@ -283,6 +308,9 @@ const Tracker = (() => {
     const editBtn = opts.editable
       ? `<button type="button" class="tag-edit-btn" data-edit-id="${rec.id}" aria-label="Editar registro">✎</button>`
       : '';
+    const deleteBtn = opts.editable
+      ? `<button type="button" class="tag-delete-btn" data-delete-id="${rec.id}" aria-label="Eliminar registro">🗑</button>`
+      : '';
 
     const descripcionHtml = rec.descripcion
       ? `<p class="tag-desc">${escapeHtml(rec.descripcion)}</p>`
@@ -296,10 +324,13 @@ const Tracker = (() => {
       <div class="tag-card" data-id="${rec.id}">
         <span class="tag-punch"></span>
         ${editBtn}
+        ${deleteBtn}
         ${photo}
         <div class="tag-body">
           <p class="tag-code">${escapeHtml(rec.codigo)}</p>
+          ${locationBarcodeHtml('Origen', rec.ubicacionOrigen)}
           ${showPhoto ? barcodeBlockHtml(rec) : ''}
+          ${locationBarcodeHtml('Destino', rec.ubicacionDestino)}
           <div class="tag-route">
             <span class="loc">${escapeHtml(rec.ubicacionOrigen || '—')}</span>
             <span class="arrow">&#8594;</span>
@@ -385,7 +416,7 @@ const Tracker = (() => {
   }
 
   return {
-    fetchRecords, createRecord, updateRecord, compressImage,
+    fetchRecords, createRecord, updateRecord, deleteRecord, compressImage,
     login, fetchUsers, createUser, deleteUser,
     tagCard, renderResults, renderTimeline, renderBarcodes, groupLatestPhotoIds,
     showToast, escapeHtml, formatDate

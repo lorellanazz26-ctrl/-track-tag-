@@ -667,6 +667,31 @@
       return;
     }
 
+    const deleteBtn = e.target.closest('[data-delete-id]');
+    if (deleteBtn) {
+      const id = deleteBtn.dataset.deleteId;
+      const card = deleteBtn.closest('.tag-card');
+      const codigo = card?.querySelector('.tag-code')?.textContent || 'este registro';
+      if (!confirm(`¿Eliminar el registro "${codigo}"? Esta acción no se puede deshacer.`)) return;
+
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = '…';
+
+      try {
+        await Tracker.deleteRecord(id, session.token);
+        currentRecords = currentRecords.filter(r => r.id !== id);
+        if (editingId === id) editingId = null;
+        renderList();
+        loadCounters();
+        Tracker.showToast(toast, `Registro ${codigo} eliminado.`, 'ok');
+      } catch (err) {
+        if (!handleAuthError(err)) Tracker.showToast(toast, err.message, 'err');
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = '🗑';
+      }
+      return;
+    }
+
     const cancelBtn = e.target.closest('[data-cancel-id]');
     if (cancelBtn) {
       editingId = null;
