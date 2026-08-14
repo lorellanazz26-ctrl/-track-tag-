@@ -1,10 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
 :root {
-  --bg: #cfe9fb;
+  --bg: #eaf5fd;
   --panel: #ffffff;
-  --panel-alt: #e7f3fc;
-  --border: #143a5c;
+  --panel-alt: #f2f9fd;
+  --border: #3a86ba;
+  --grid-line: #d3e9f8;
   --text: #0b2540;
   --text-dim: #4a6785;
   --accent: #0369a1;
@@ -28,8 +29,8 @@ body {
   margin: 0;
   background: var(--bg);
   background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
   background-attachment: fixed;
   background-position: -1px -1px;
