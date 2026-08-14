@@ -328,9 +328,9 @@ const Tracker = (() => {
         ${photo}
         <div class="tag-body">
           <p class="tag-code">${escapeHtml(rec.codigo)}</p>
-          ${locationBarcodeHtml('Origen', rec.ubicacionOrigen)}
-          ${showPhoto ? barcodeBlockHtml(rec) : ''}
-          ${locationBarcodeHtml('Destino', rec.ubicacionDestino)}
+          ${opts.editable ? locationBarcodeHtml('Origen', rec.ubicacionOrigen) : ''}
+          ${opts.editable && showPhoto ? barcodeBlockHtml(rec) : ''}
+          ${opts.editable ? locationBarcodeHtml('Destino', rec.ubicacionDestino) : ''}
           <div class="tag-route">
             <span class="loc">${escapeHtml(rec.ubicacionOrigen || '—')}</span>
             <span class="arrow">&#8594;</span>
