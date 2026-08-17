@@ -116,6 +116,10 @@
             <label for="f-descripcion">Descripción</label>
             <textarea id="f-descripcion" rows="3" placeholder="Detalle del ítem (opcional)"></textarea>
           </div>
+          <div class="field">
+            <label for="f-comentario">Comentario</label>
+            <textarea id="f-comentario" rows="2" placeholder="Alguna nota u observación (opcional)"></textarea>
+          </div>
 
           <div class="field">
             <label>Fotografía</label>
@@ -458,6 +462,7 @@
       cantidad: Number(document.getElementById('f-cantidad').value),
       ubicacionDestino: document.getElementById('f-destino').value.trim(),
       descripcion: document.getElementById('f-descripcion').value.trim(),
+      comentario: document.getElementById('f-comentario').value.trim(),
       cambiado: document.getElementById('f-cambiado').checked,
       imagen: currentImageDataUrl
     };
@@ -716,6 +721,7 @@
         cantidad: Number(card.querySelector('.edit-cantidad').value),
         ubicacionDestino: card.querySelector('.edit-destino').value.trim(),
         descripcion: card.querySelector('.edit-descripcion').value.trim(),
+        comentario: card.querySelector('.edit-comentario').value.trim(),
         cambiado: card.querySelector('.edit-cambiado').checked
       };
 

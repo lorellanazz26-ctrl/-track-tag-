@@ -40,6 +40,7 @@ export async function onRequestPost(context) {
   const ubicacionOrigen = String(body.ubicacionOrigen || '').trim();
   const ubicacionDestino = String(body.ubicacionDestino || '').trim();
   const descripcion = String(body.descripcion || '').trim();
+  const comentario = String(body.comentario || '').trim();
   const cantidad = Number(body.cantidad);
   const cambiado = !!body.cambiado;
   const imagen = typeof body.imagen === 'string' && body.imagen.startsWith('data:image') ? body.imagen : null;
@@ -61,6 +62,7 @@ export async function onRequestPost(context) {
       ubicacionOrigen,
       ubicacionDestino,
       descripcion,
+      comentario,
       cantidad,
       cambiado,
       fechaCambio: cambiado ? now : null,

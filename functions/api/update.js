@@ -33,6 +33,7 @@ export async function onRequestPatch(context) {
   const ubicacionOrigen = String(body.ubicacionOrigen || '').trim();
   const ubicacionDestino = String(body.ubicacionDestino || '').trim();
   const descripcion = String(body.descripcion || '').trim();
+  const comentario = String(body.comentario || '').trim();
   const cantidad = Number(body.cantidad);
   const cambiado = !!body.cambiado;
 
@@ -69,6 +70,7 @@ export async function onRequestPatch(context) {
       ubicacionOrigen,
       ubicacionDestino,
       descripcion,
+      comentario,
       cantidad,
       cambiado,
       fechaCambio,

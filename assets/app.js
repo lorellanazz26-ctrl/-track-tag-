@@ -277,6 +277,10 @@ const Tracker = (() => {
             <label>Descripción</label>
             <textarea rows="2" class="edit-descripcion">${escapeHtml(rec.descripcion || '')}</textarea>
           </div>
+          <div class="field">
+            <label>Comentario</label>
+            <textarea rows="2" class="edit-comentario">${escapeHtml(rec.comentario || '')}</textarea>
+          </div>
           <label class="check-row" style="margin-bottom:14px;">
             <input type="checkbox" class="edit-cambiado" ${rec.cambiado ? 'checked' : ''}>
             <span><span class="check-label">CAMBIADO</span></span>
@@ -316,6 +320,10 @@ const Tracker = (() => {
       ? `<p class="tag-desc">${escapeHtml(rec.descripcion)}</p>`
       : '';
 
+    const comentarioHtml = rec.comentario
+      ? `<p class="tag-comment"><span class="tag-comment-label">Comentario</span>${escapeHtml(rec.comentario)}</p>`
+      : '';
+
     const fechaCambioHtml = (cambiado && rec.fechaCambio)
       ? `<p class="tag-date tag-date-changed">Cambiado: ${formatDate(rec.fechaCambio)}</p>`
       : '';
@@ -337,6 +345,7 @@ const Tracker = (() => {
             <span class="loc">${escapeHtml(rec.ubicacionDestino || '—')}</span>
           </div>
           ${descripcionHtml}
+          ${comentarioHtml}
           <div class="tag-meta">
             <span class="qty-pill">Cant. ${escapeHtml(rec.cantidad ?? '—')}</span>
             <span class="badge ${cambiado ? 'ok' : 'pending'}">${cambiado ? 'Cambiado' : 'Por cambiar'}</span>
