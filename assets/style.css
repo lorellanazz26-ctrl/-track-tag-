@@ -242,9 +242,11 @@ input::placeholder, textarea::placeholder { color: #6b8bab; }
 .tag-photo {
   width: 100%;
   aspect-ratio: 4 / 3;
-  object-fit: cover;
+  object-fit: contain;
   background: var(--panel-alt);
   display: block;
+  padding: 12px;
+  box-sizing: border-box;
   border-bottom: 1px dashed var(--border);
 }
 .tag-photo-empty {
@@ -620,8 +622,11 @@ input::placeholder, textarea::placeholder { color: #6b8bab; }
 .photo-preview {
   width: 100%;
   aspect-ratio: 4/3;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--panel-alt);
   border-radius: var(--radius);
+  padding: 12px;
+  box-sizing: border-box;
   display: none;
   margin-bottom: 12px;
 }
