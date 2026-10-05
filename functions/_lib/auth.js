@@ -3,7 +3,9 @@
 // solo se puede importar desde otras funciones (write.js, update.js, login.js, users.js).
 
 const encoder = new TextEncoder();
-const PBKDF2_ITERATIONS = 100000;
+// 10.000 vueltas: entra en el límite de 10 ms de CPU del plan gratuito de Cloudflare.
+// (Antes eran 100.000, que superaba ese límite y producía errores 503 al iniciar sesión.)
+const PBKDF2_ITERATIONS = 10000;
 const SESSION_SECONDS = 12 * 60 * 60; // 12 horas de sesión
 
 function bytesToHex(bytes) {
