@@ -24,6 +24,13 @@ const Tracker = (() => {
     return err;
   }
 
+  // Dirección de la foto de un registro (formato nuevo: aparte; formato viejo: dentro del registro).
+  function photoSrc(rec) {
+    if (rec.imagen) return rec.imagen;
+    if (rec.tieneFoto) return `/api/foto?id=${encodeURIComponent(rec.id)}`;
+    return null;
+  }
+
   async function fetchRecords(codigo) {
     const url = codigo
       ? `/api/read?codigo=${encodeURIComponent(codigo)}`
@@ -244,8 +251,8 @@ const Tracker = (() => {
 
   // Formulario inline de edición (reemplaza la ficha cuando está en modo edición)
   function editFormHtml(rec) {
-    const photo = rec.imagen
-      ? `<img class="tag-photo" src="${rec.imagen}" alt="Foto de ${escapeHtml(rec.codigo)}">`
+    const photo = photoSrc(rec)
+      ? `<img class="tag-photo" src="${photoSrc(rec)}" alt="Foto de ${escapeHtml(rec.codigo)}">`
       : `<div class="tag-photo-empty">Sin fotografía</div>`;
     const barcodeHint = rec.codigoBarra
       ? `Código de barra: ${escapeHtml(rec.codigoBarra)}`
@@ -305,8 +312,8 @@ const Tracker = (() => {
     const showPhoto = opts.latestPhotoIds ? opts.latestPhotoIds.has(rec.id) : true;
     const photo = !showPhoto
       ? `<div class="tag-photo-empty subtle">Ver foto en el registro más reciente</div>`
-      : (rec.imagen
-          ? `<img class="tag-photo" src="${rec.imagen}" alt="Foto de ${escapeHtml(rec.codigo)}" loading="lazy">`
+      : (photoSrc(rec)
+          ? `<img class="tag-photo" src="${photoSrc(rec)}" alt="Foto de ${escapeHtml(rec.codigo)}" loading="lazy">`
           : `<div class="tag-photo-empty">Sin fotografía</div>`);
 
     const editBtn = opts.editable

@@ -91,3 +91,9 @@ wrangler pages dev . --kv INVENTORY_KV
 ```
 
 Actualizá el `id` del namespace en `wrangler.toml` con el ID real que te da Cloudflare al crear el namespace.
+
+## Fotos (formato nuevo)
+
+Las fotos se guardan aparte en claves `foto:<id>` de KV y se sirven desde `/api/foto?id=<id>`.
+Los registros (`records`) solo llevan `tieneFoto: true`, así las consultas son livianas.
+Para convertir una base antigua, un administrador usa el panel "Optimizar base de datos" en `admin.html`.

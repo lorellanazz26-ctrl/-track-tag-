@@ -1,6 +1,7 @@
 // POST /api/write -> crea un nuevo registro. Requiere sesión válida (Authorization: Bearer <token>).
 
 import { verifyToken, getBearerToken, jsonResponse } from '../_lib/auth.js';
+import { fotoKey, dataUrlToBytes } from '../_lib/fotos.js';
 
 const KV_KEY = 'records';
 const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8MB de margen (KV admite hasta 25MB por valor)
@@ -54,9 +55,19 @@ export async function onRequestPost(context) {
     const raw = await env.INVENTORY_KV.get(KV_KEY);
     const records = raw ? JSON.parse(raw) : [];
 
+    const id = uuid();
+    let tieneFoto = false;
+    if (imagen) {
+      const foto = dataUrlToBytes(imagen);
+      if (!foto) return jsonResponse({ error: 'La imagen no es válida.' }, 400);
+      // La foto se guarda aparte para que la lista de registros siga siendo liviana.
+      await env.INVENTORY_KV.put(fotoKey(id), foto.bytes, { metadata: { ct: foto.contentType } });
+      tieneFoto = true;
+    }
+
     const now = new Date().toISOString();
     const newRecord = {
-      id: uuid(),
+      id,
       codigo,
       codigoBarra: codigoBarra || null,
       ubicacionOrigen,
@@ -66,7 +77,7 @@ export async function onRequestPost(context) {
       cantidad,
       cambiado,
       fechaCambio: cambiado ? now : null,
-      imagen,
+      tieneFoto,
       fecha: now,
       creadoPor: session.u
     };

@@ -2,6 +2,7 @@
 // Requiere sesión válida (Authorization: Bearer <token>).
 
 import { verifyToken, getBearerToken, jsonResponse } from '../_lib/auth.js';
+import { fotoKey } from '../_lib/fotos.js';
 
 const KV_KEY = 'records';
 
@@ -123,6 +124,8 @@ export async function onRequestDelete(context) {
 
     records.splice(idx, 1);
     await env.INVENTORY_KV.put(KV_KEY, JSON.stringify(records));
+    // Borra también su foto (si tenía una guardada aparte).
+    await env.INVENTORY_KV.delete(fotoKey(id));
 
     return jsonResponse({ ok: true, deletedId: id });
   } catch (err) {

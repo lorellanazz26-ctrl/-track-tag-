@@ -196,6 +196,14 @@
         <button type="submit" class="btn" id="btn-create-user">Crear usuario</button>
       </form>
     </section>
+
+    <!-- ======================= MIGRACIÓN (solo admin) ======================= -->
+    <section class="panel" id="migrate-panel" style="display:none; margin-top:40px;">
+      <h2>Optimizar base de datos</h2>
+      <p class="page-sub" style="font-size:13px;">Mueve las fotos fuera de los registros para que las consultas dejen de dar error 503. Se hace una sola vez: descarga un respaldo en tu computador y luego sube cada foto por separado. <strong>Avisa a los demás usuarios que no carguen ni editen registros mientras dure.</strong></p>
+      <p class="status-line" id="migrate-status"></p>
+      <button type="button" class="btn" id="btn-migrate">Optimizar ahora</button>
+    </section>
   </div>
 </main>
 
@@ -249,6 +257,7 @@
   const userInfo = document.getElementById('user-info');
   const userInfoLabel = document.getElementById('user-info-label');
   const usersPanel = document.getElementById('users-panel');
+  const migratePanel = document.getElementById('migrate-panel');
 
   function showLoginScreen() {
     loginScreen.style.display = '';
@@ -262,6 +271,7 @@
     userInfo.style.display = 'flex';
     userInfoLabel.textContent = `👤 ${session.username} · ${session.role === 'admin' ? 'Administrador' : 'Operador'}`;
     usersPanel.style.display = session.role === 'admin' ? '' : 'none';
+    migratePanel.style.display = session.role === 'admin' ? '' : 'none';
 
     loadCounters();
     if (session.role === 'admin') loadUsers();
@@ -821,6 +831,68 @@
       if (!handleAuthError(err)) Tracker.showToast(toast, err.message, 'err');
       btn.disabled = false;
       btn.textContent = 'Eliminar';
+    }
+  });
+
+  // ---- Migración: fotos fuera de los registros (solo admin) ----
+  document.getElementById('btn-migrate').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-migrate');
+    const status = document.getElementById('migrate-status');
+    const say = (t, cls) => { status.textContent = t; status.className = 'status-line' + (cls ? ' ' + cls : ''); };
+    const auth = { 'Authorization': `Bearer ${session.token}` };
+    if (!confirm('¿Nadie más está cargando registros ahora? La optimización tarda unos minutos.')) return;
+    btn.disabled = true;
+    try {
+      say('Leyendo la base de datos…');
+      const res = await fetch('/api/migrate', { headers: auth });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
+      const text = await res.text();
+      const records = JSON.parse(text);
+
+      // Respaldo local, por seguridad.
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      a.download = `respaldo-track-tag-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+
+      const withPhoto = records.filter(r => typeof r.imagen === 'string' && r.imagen.startsWith('data:image'));
+      let done = 0, next = 0;
+      const total = withPhoto.length;
+      async function worker() {
+        while (next < total) {
+          const r = withPhoto[next++];
+          const blob = await (await fetch(r.imagen)).blob();
+          let ok = false, lastErr;
+          for (let t = 0; t < 4 && !ok; t++) {
+            const up = await fetch('/api/migrate?id=' + encodeURIComponent(r.id), {
+              method: 'POST', headers: { ...auth, 'Content-Type': blob.type || 'image/jpeg' }, body: blob
+            });
+            if (up.ok) ok = true;
+            else { lastErr = (await up.json().catch(() => ({}))).error || `Error ${up.status}`; await new Promise(z => setTimeout(z, 1000 * (t + 1))); }
+          }
+          if (!ok) throw new Error(`No se pudo subir una foto (${lastErr}). Vuelve a presionar el botón: continúa donde quedó.`);
+          done++;
+          say(`Subiendo fotos… ${done} de ${total}`);
+        }
+      }
+      await Promise.all([worker(), worker(), worker()]);
+
+      say('Guardando registros livianos…');
+      const light = records.map(r => {
+        const { imagen, ...rest } = r;
+        return { ...rest, tieneFoto: !!(imagen || r.tieneFoto) };
+      });
+      const fin = await fetch('/api/migrate?action=finish', {
+        method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(light)
+      });
+      const out = await fin.json().catch(() => ({}));
+      if (!fin.ok) throw new Error(out.error || `Error ${fin.status}`);
+      say(`Listo: ${out.registros} registros y ${out.fotos} fotos optimizados. Guarda el archivo de respaldo descargado.`, 'ok');
+      loadCounters();
+    } catch (err) {
+      say(err.message, 'error');
+    } finally {
+      btn.disabled = false;
     }
   });
 
