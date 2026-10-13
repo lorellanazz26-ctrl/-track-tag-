@@ -350,7 +350,7 @@ const Tracker = (() => {
             <span class="qty-pill">Cant. ${escapeHtml(rec.cantidad ?? '—')}</span>
             <span class="badge ${cambiado ? 'ok' : 'pending'}">${cambiado ? 'Cambiado' : 'Por cambiar'}</span>
           </div>
-          <p class="tag-date">Registrado: ${formatDate(rec.fecha)}</p>
+          <p class="tag-date">Registrado: ${formatDate(rec.fecha)}${rec.creadoPor ? ' · por ' + escapeHtml(rec.creadoPor) : ''}</p>
           ${fechaCambioHtml}
         </div>
       </div>`;
